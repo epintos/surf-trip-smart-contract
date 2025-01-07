@@ -5,11 +5,13 @@ pragma solidity 0.8.28;
 import {Test, console2} from "lib/forge-std/src/Test.sol";
 import {SurfTrip} from "src/SurfTrip.sol";
 import {Vm} from "forge-std/Vm.sol";
+import {HelperConfig} from "script/HelperConfig.s.sol";
+import {DeploySurfTrip} from "script/DeploySurfTrip.s.sol";
 
 contract SurfTripTest is Test {
     SurfTrip public surfTrip;
     uint256 public TRIP_FEE = 0.01 ether;
-    address public DEPLOYER = makeAddr("Deployer");
+    address public DEPLOYER;
     address public SURFER = makeAddr("Surfer");
     uint256 public DEADLINE = 2;
     uint256 public STARTING_TIMESTAP = 1;
@@ -22,11 +24,11 @@ contract SurfTripTest is Test {
     event OrganizerChanged(address indexed previousOrganizer, address indexed newOrganizer);
 
     function setUp() public {
-        vm.startPrank(DEPLOYER);
-        surfTrip = new SurfTrip(TRIP_FEE);
+        (surfTrip,) = new DeploySurfTrip().deployContract();
+        DEPLOYER = msg.sender;
         vm.warp(STARTING_TIMESTAP);
+        vm.prank(DEPLOYER);
         surfTrip.setDeadline(DEADLINE);
-        vm.stopPrank();
     }
 
     modifier surferContribution() {
@@ -173,12 +175,13 @@ contract SurfTripTest is Test {
         vm.stopPrank();
     }
 
-    function testWithdrawSendsMoneyToOrganizer() public {
-        uint256 startingBalance = address(surfTrip).balance;
+    function testWithdrawSendsMoneyToOrganizer() public surferContribution {
+        uint256 organizerStartingBalance = address(DEPLOYER).balance;
+        uint256 startingContractBalance = address(surfTrip).balance;
         vm.prank(DEPLOYER);
         surfTrip.withdraw();
         assertEq(address(surfTrip).balance, 0);
-        assertEq(address(DEPLOYER).balance, startingBalance);
+        assertEq(address(DEPLOYER).balance, organizerStartingBalance + startingContractBalance);
     }
 
     // CHANGE ORGANIZER
