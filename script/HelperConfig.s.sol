@@ -18,7 +18,6 @@ contract HelperConfig is Script, CodeConstants {
 
     mapping(uint256 chainId => NetworkConfig) public networkConfigs;
 
-
     function getConfigByChainId(uint256 chainId) public pure returns (NetworkConfig memory) {
         if (chainId == SEPOLIA_CHAIN_ID) {
             return getSepoliaEthConfig();
@@ -41,4 +40,3 @@ contract HelperConfig is Script, CodeConstants {
         return NetworkConfig({tripFee: 0.01 ether});
     }
 }
-

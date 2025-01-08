@@ -3,7 +3,6 @@
 pragma solidity 0.8.28;
 
 contract SurfTrip {
-
     error SurfTrip_NotOrganizer();
     error SurfTrip__DeadlineAlreadySet();
     error SurfTrip__DepositIsTooLow(uint256 tripFee);
@@ -11,7 +10,7 @@ contract SurfTrip {
     error SurfTrip__RefundFailed();
     error SurfTrip__DeadlineMet();
     error SurfTrip__WithdrawFailed();
-    
+
     uint256 private immutable i_tripFee;
     address private s_organizer;
     uint256 private s_deadline;
@@ -47,7 +46,7 @@ contract SurfTrip {
     function deposit() public payable {
         if (msg.value < i_tripFee) {
             revert SurfTrip__DepositIsTooLow(i_tripFee);
-        } 
+        }
         if (s_surfersBalances[msg.sender] == 0) {
             s_surfers.push(msg.sender);
         }
@@ -98,30 +97,30 @@ contract SurfTrip {
         address previousOrganizer = s_organizer;
         s_organizer = newOrganizer;
         emit OrganizerChanged(previousOrganizer, newOrganizer);
-    } 
+    }
 
     receive() external payable {
         deposit();
     }
 
     /* Getter functions */
-    function getTripFee() external view returns(uint256) {
+    function getTripFee() external view returns (uint256) {
         return i_tripFee;
     }
 
-    function getOrganizer() external view returns(address) {
+    function getOrganizer() external view returns (address) {
         return s_organizer;
     }
 
-    function getDeadline() external view returns(uint256) {
+    function getDeadline() external view returns (uint256) {
         return s_deadline;
     }
 
-    function getSurferBalance(address surfer) external view returns(uint256) {
+    function getSurferBalance(address surfer) external view returns (uint256) {
         return s_surfersBalances[surfer];
     }
 
-    function getSurfer(uint256 index) public view returns(address) {
+    function getSurfer(uint256 index) public view returns (address) {
         return s_surfers[index];
     }
 }

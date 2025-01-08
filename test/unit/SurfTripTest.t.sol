@@ -34,7 +34,7 @@ contract SurfTripTest is Test {
     modifier surferContribution() {
         vm.startPrank(SURFER);
         vm.deal(SURFER, STARTING_SURFER_BALANCE);
-        surfTrip.deposit{ value: TRIP_FEE}();
+        surfTrip.deposit{value: TRIP_FEE}();
         vm.stopPrank();
         _;
     }
@@ -82,9 +82,9 @@ contract SurfTripTest is Test {
     function testDepositAddsContributorBalance() public {
         vm.startPrank(SURFER);
         vm.deal(SURFER, STARTING_SURFER_BALANCE);
-        surfTrip.deposit{ value: TRIP_FEE}();
+        surfTrip.deposit{value: TRIP_FEE}();
         assertEq(surfTrip.getSurferBalance(SURFER), TRIP_FEE);
-        surfTrip.deposit{ value: TRIP_FEE}();
+        surfTrip.deposit{value: TRIP_FEE}();
         vm.stopPrank();
         assertEq(surfTrip.getSurferBalance(SURFER), TRIP_FEE * 2);
         assertEq(address(surfTrip).balance, TRIP_FEE * 2);
@@ -98,7 +98,7 @@ contract SurfTripTest is Test {
         vm.prank(SURFER);
         vm.deal(SURFER, STARTING_SURFER_BALANCE);
         vm.expectRevert(abi.encodeWithSelector(SurfTrip.SurfTrip__DepositIsTooLow.selector, TRIP_FEE));
-        surfTrip.deposit{ value: TRIP_FEE - 1}();
+        surfTrip.deposit{value: TRIP_FEE - 1}();
     }
 
     function testDepositEmitsEvent() public {
@@ -106,7 +106,7 @@ contract SurfTripTest is Test {
         vm.deal(SURFER, STARTING_SURFER_BALANCE);
         vm.expectEmit(true, true, true, false, address(surfTrip));
         emit DepositMade(SURFER, TRIP_FEE, TRIP_FEE);
-        surfTrip.deposit{ value: TRIP_FEE}();
+        surfTrip.deposit{value: TRIP_FEE}();
     }
 
     // REFUND
@@ -159,12 +159,11 @@ contract SurfTripTest is Test {
         vm.stopPrank();
     }
 
-    function testWithdrawRemovesTheSurfersBalances() public surferContribution{
+    function testWithdrawRemovesTheSurfersBalances() public surferContribution {
         vm.prank(DEPLOYER);
         surfTrip.withdraw();
         assertEq(surfTrip.getSurferBalance(SURFER), 0);
     }
-
 
     function testWithdrawEmitsEvent() public {
         vm.startPrank(DEPLOYER);
@@ -208,7 +207,7 @@ contract SurfTripTest is Test {
     function testReceiveAddsSurferBalance() public {
         vm.prank(SURFER);
         vm.deal(SURFER, STARTING_SURFER_BALANCE);
-        (bool success, ) = address(surfTrip).call{value: TRIP_FEE}("");
+        (bool success,) = address(surfTrip).call{value: TRIP_FEE}("");
         assertEq(success, true);
         assertEq(surfTrip.getSurfer(0), SURFER);
     }
