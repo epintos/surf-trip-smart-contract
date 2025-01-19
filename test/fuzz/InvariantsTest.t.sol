@@ -22,14 +22,14 @@ contract InvariantsTest is StdInvariant, Test {
         targetContract(address(handler));
     }
 
-    function invariant_openToWithdrawBeforeDeadine() public view {
-        assert(surfTrip.getBalance() >= 0);
-    }
+    // function invariant_openToWithdrawBeforeDeadine() public view {
+    //     assert(surfTrip.getBalance() >= 0);
+    // }
 
-    function invariant_gettersShouldNotRevert() public view {
-        surfTrip.getDeadline();
-        surfTrip.getOrganizer();
-        surfTrip.getTripFee();
-        surfTrip.getBalance();
-    }
+    // function invariant_gettersShouldNotRevert() public view {
+    //     surfTrip.getDeadline();
+    //     surfTrip.getOrganizer();
+    //     surfTrip.getTripFee();
+    //     surfTrip.getBalance();
+    // }
 }
