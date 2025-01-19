@@ -27,8 +27,8 @@ contract SurfTripTest is Test {
 
     event DepositMade(address indexed surfer, uint256 indexed amount, uint256 indexed newSurferBalance);
     event DeadlineSet(uint256 indexed deadline);
-    event RefundMade(address indexed surfer, uint256 indexed amount, uint256 indexed surferBalanceLeft);
-    event WithdrawMade(address indexed host, uint256 indexed amountWithdraw);
+    event RefundMade(address indexed surfer);
+    event WithdrawMade(address indexed host);
     event OrganizerChanged(address indexed previousOrganizer, address indexed newOrganizer);
 
     function setUp() public {
@@ -43,10 +43,18 @@ contract SurfTripTest is Test {
         vm.deal(SURFER, STARTING_SURFER_BALANCE); // ETH
     }
 
-    modifier surferContribution() {
+    modifier surferTokenContribution() {
         vm.startPrank(SURFER);
         ERC20Mock(wUSDC).approve(address(surfTrip), SURFER_DEPOSIT);
         surfTrip.deposit(wUSDC, SURFER_DEPOSIT);
+        vm.stopPrank();
+        _;
+    }
+
+    modifier surferETHContribution() {
+        vm.startPrank(SURFER);
+        (bool success,) = address(surfTrip).call{ value: tripFee }("");
+        assertEq(success, true);
         vm.stopPrank();
         _;
     }
@@ -60,7 +68,7 @@ contract SurfTripTest is Test {
         assertEq(surfTrip.getOrganizer(), DEPLOYER);
     }
 
-    function testGetSurferBalance() public surferContribution {
+    function testGetSurferBalance() public surferTokenContribution {
         assertEq(surfTrip.getSurferBalance(SURFER), surfTrip.getValueInETH(wUSDC, SURFER_DEPOSIT));
     }
 
@@ -68,7 +76,7 @@ contract SurfTripTest is Test {
         assertEq(surfTrip.getDeadline(), STARTING_TIMESTAP + DEADLINE * 1 days);
     }
 
-    // // SET DEADLINE
+    /// SET DEADLINE ///
     function testSetDeadlineBySomeoneElseFails() public {
         vm.prank(SURFER);
         vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, SURFER));
@@ -90,144 +98,142 @@ contract SurfTripTest is Test {
         surfTrip.setDeadline(DEADLINE);
     }
 
-    // // DEPOSIT
-    function testDepositAddsContributorBalance() public {
-        vm.startPrank(SURFER);
-        vm.deal(SURFER, STARTING_SURFER_BALANCE);
-        surfTrip.deposit{ value: tripFee }();
-        assertEq(surfTrip.getSurferBalance(SURFER), tripFee);
-        surfTrip.deposit{ value: tripFee }();
-        vm.stopPrank();
-        assertEq(surfTrip.getSurferBalance(SURFER), tripFee * 2);
-        assertEq(address(surfTrip).balance, tripFee * 2);
+    /// DEPOSIT ///
+    function testDepositAddsContributorBalance() public surferTokenContribution {
+        assertEq(surfTrip.getSurferTokenBalance(wUSDC, SURFER), SURFER_DEPOSIT);
+        assertEq(ERC20Mock(wUSDC).balanceOf(address(surfTrip)), SURFER_DEPOSIT);
     }
 
-    // function testDepositAddsSurferToArrayOfSurfers() public surferContribution {
-    //     assertEq(surfTrip.getSurfer(0), SURFER);
-    // }
+    function testDepositAddsSurferToArrayOfSurfers() public surferTokenContribution {
+        assertEq(surfTrip.getSurfer(0), SURFER);
+    }
 
-    // function testDepositFailsIfDepositIsNotEnough() public {
-    //     vm.prank(SURFER);
-    //     vm.deal(SURFER, STARTING_SURFER_BALANCE);
-    //     vm.expectRevert(abi.encodeWithSelector(SurfTrip.SurfTrip__DepositIsTooLow.selector, tripFee));
-    //     surfTrip.deposit{ value: tripFee - 1 }();
-    // }
+    function testDepositFailsIfDepositIsNotEnough() public {
+        vm.startPrank(SURFER);
+        ERC20Mock(wUSDC).approve(address(surfTrip), SURFER_DEPOSIT);
+        vm.expectRevert(SurfTrip.SurfTrip__DepositIsTooLow.selector);
+        surfTrip.deposit(wUSDC, tripFee);
+        vm.stopPrank();
+    }
 
-    // function testDepositEmitsEvent() public {
-    //     vm.prank(SURFER);
-    //     vm.deal(SURFER, STARTING_SURFER_BALANCE);
-    //     vm.expectEmit(true, true, true, false, address(surfTrip));
-    //     emit DepositMade(SURFER, tripFee, tripFee);
-    //     surfTrip.deposit{ value: tripFee }();
-    // }
+    function testDepositEmitsEvent() public {
+        vm.startPrank(SURFER);
+        ERC20Mock(wUSDC).approve(address(surfTrip), SURFER_DEPOSIT);
+        vm.expectEmit(true, true, true, false, address(surfTrip));
+        emit DepositMade(SURFER, SURFER_DEPOSIT, surfTrip.getValueInETH(wUSDC, SURFER_DEPOSIT));
+        surfTrip.deposit(wUSDC, SURFER_DEPOSIT);
+        vm.stopPrank();
+    }
 
-    // // REFUND
-    // function testRefundFailsIfDeadlineHasPassed() public {
-    //     vm.warp(STARTING_TIMESTAP + DEADLINE * 2 days);
-    //     vm.startPrank(SURFER);
-    //     vm.expectRevert(SurfTrip.SurfTrip__DeadlineMet.selector);
-    //     surfTrip.refund(tripFee);
-    //     vm.stopPrank();
-    // }
+    /// REFUND ///
+    function testRefundFailsIfDeadlineHasPassed() public {
+        vm.warp(STARTING_TIMESTAP + DEADLINE * 2 days);
+        vm.startPrank(SURFER);
+        vm.expectRevert(SurfTrip.SurfTrip__DeadlineMet.selector);
+        surfTrip.refund();
+        vm.stopPrank();
+    }
 
-    // function testRefundFailsIfAmountIsZero() public {
-    //     vm.startPrank(SURFER);
-    //     vm.expectRevert(SurfTrip.SurfTrip__NeedsToBeMoreThanZero.selector);
-    //     surfTrip.refund(0);
-    //     vm.stopPrank();
-    // }
+    function testRefundRefundsAmountToSurfer() public surferTokenContribution surferETHContribution {
+        uint256 startingBalance = ERC20Mock(wUSDC).balanceOf(SURFER);
+        uint256 startingETHBalance = address(SURFER).balance;
+        vm.startPrank(SURFER);
+        surfTrip.refund();
+        vm.stopPrank();
+        uint256 newBalance = ERC20Mock(wUSDC).balanceOf(SURFER);
+        uint256 newETHBalance = address(SURFER).balance;
+        vm.startPrank(SURFER);
+        assertEq(newBalance, startingBalance + SURFER_DEPOSIT);
+        assertEq(newETHBalance, startingETHBalance + tripFee);
+    }
 
-    // function testRefundFailsIfNotEnoughtSurferBalance() public surferContribution {
-    //     vm.startPrank(SURFER);
-    //     vm.expectRevert(SurfTrip.SurfTrip__NotEnoughDeposits.selector);
-    //     surfTrip.refund(tripFee + 1);
-    //     vm.stopPrank();
-    // }
+    function testRefundReducesSurferDepositsBalance() public surferTokenContribution {
+        uint256 startingBalance = surfTrip.getSurferTokenBalance(wUSDC, SURFER);
+        vm.startPrank(SURFER);
+        surfTrip.refund();
+        vm.stopPrank();
+        uint256 newBalance = surfTrip.getSurferTokenBalance(wUSDC, SURFER);
+        assertEq(newBalance, startingBalance - SURFER_DEPOSIT);
+    }
 
-    // function testRefundRefundsAmountToSurfer() public surferContribution {
-    //     uint256 startingBalance = address(SURFER).balance;
-    //     vm.startPrank(SURFER);
-    //     surfTrip.refund(tripFee);
-    //     vm.stopPrank();
-    //     uint256 newBalance = address(SURFER).balance;
-    //     assertEq(newBalance, startingBalance + tripFee);
-    // }
+    function testRefundEmitsEvent() public surferTokenContribution {
+        vm.startPrank(SURFER);
+        vm.expectEmit(true, false, false, false, address(surfTrip));
+        emit RefundMade(SURFER);
+        surfTrip.refund();
+        vm.stopPrank();
+    }
 
-    // function testRefundReducesSurferDepositsBalance() public surferContribution {
-    //     uint256 startingBalance = surfTrip.getSurferBalance(SURFER);
-    //     vm.startPrank(SURFER);
-    //     surfTrip.refund(tripFee);
-    //     vm.stopPrank();
-    //     uint256 newBalance = surfTrip.getSurferBalance(SURFER);
-    //     assertEq(newBalance, startingBalance - tripFee);
-    // }
+    /// WITHDRAW ///
+    function testWithdrawFailsIfNotOrganizer() public {
+        vm.startPrank(SURFER);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, SURFER));
+        surfTrip.withdraw();
+        vm.stopPrank();
+    }
 
-    // function testRefundEmitsEvent() public surferContribution {
-    //     vm.startPrank(SURFER);
-    //     vm.expectEmit(true, true, true, false, address(surfTrip));
-    //     emit RefundMade(SURFER, tripFee, 0);
-    //     surfTrip.refund(tripFee);
-    //     vm.stopPrank();
-    // }
+    function testWithdrawRemovesTheSurfersBalances() public surferTokenContribution surferETHContribution {
+        vm.startPrank(DEPLOYER);
+        surfTrip.withdraw();
+        assertEq(surfTrip.getSurferBalance(SURFER), 0);
+        vm.stopPrank();
+    }
 
-    // // WITHDRAW
-    // function testWithdrawFailsIfNotOrganizer() public {
-    //     vm.startPrank(SURFER);
-    //     vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, SURFER));
-    //     surfTrip.withdraw();
-    //     vm.stopPrank();
-    // }
+    function testWithdrawEmitsEvent() public {
+        vm.startPrank(DEPLOYER);
+        vm.expectEmit(true, false, false, false, address(surfTrip));
+        emit WithdrawMade(DEPLOYER);
+        surfTrip.withdraw();
+        vm.stopPrank();
+    }
 
-    // function testWithdrawRemovesTheSurfersBalances() public surferContribution {
-    //     vm.prank(DEPLOYER);
-    //     surfTrip.withdraw();
-    //     assertEq(surfTrip.getSurferBalance(SURFER), 0);
-    // }
+    function testWithdrawSendsMoneyToOrganizer() public surferTokenContribution surferETHContribution {
+        uint256 organizerStartingBalance = ERC20Mock(wUSDC).balanceOf(address(DEPLOYER));
+        uint256 surferStartingBalance = surfTrip.getSurferTokenBalance(wUSDC, SURFER);
+        uint256 organizerStartingETHBalance = address(DEPLOYER).balance;
+        uint256 surferStartingETHBalance = surfTrip.getSurferETHBalance(SURFER);
+        vm.prank(DEPLOYER);
+        surfTrip.withdraw();
+        assertEq(ERC20Mock(wUSDC).balanceOf(address(DEPLOYER)), organizerStartingBalance + surferStartingBalance);
+        assertEq(address(DEPLOYER).balance, organizerStartingETHBalance + surferStartingETHBalance);
+    }
 
-    // function testWithdrawEmitsEvent() public {
-    //     vm.startPrank(DEPLOYER);
-    //     uint256 balance = address(surfTrip).balance;
-    //     vm.expectEmit(true, true, false, false, address(surfTrip));
-    //     emit WithdrawMade(DEPLOYER, balance);
-    //     surfTrip.withdraw();
-    //     vm.stopPrank();
-    // }
+    /// CHANGE ORGANIZER ///
+    function testChangeOrganizerFailsIfCalledBySomeoneElse() public {
+        vm.prank(SURFER);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, SURFER));
+        surfTrip.changeOrganizer(SURFER);
+    }
 
-    // function testWithdrawSendsMoneyToOrganizer() public surferContribution {
-    //     uint256 organizerStartingBalance = address(DEPLOYER).balance;
-    //     uint256 startingContractBalance = address(surfTrip).balance;
-    //     vm.prank(DEPLOYER);
-    //     surfTrip.withdraw();
-    //     assertEq(address(surfTrip).balance, 0);
-    //     assertEq(address(DEPLOYER).balance, organizerStartingBalance + startingContractBalance);
-    // }
+    function testChangeOrganizerChangesOrganizer() public {
+        vm.prank(DEPLOYER);
+        surfTrip.changeOrganizer(SURFER);
+        assertEq(surfTrip.getOrganizer(), SURFER);
+    }
 
-    // // CHANGE ORGANIZER
-    // function testChangeOrganizerFailsIfCalledBySomeoneElse() public {
-    //     vm.prank(SURFER);
-    //     vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, SURFER));
-    //     surfTrip.changeOrganizer(SURFER);
-    // }
+    function testChangeOrganizerEmitsEvent() public {
+        vm.prank(DEPLOYER);
+        vm.expectEmit(true, true, false, false, address(surfTrip));
+        emit OrganizerChanged(DEPLOYER, SURFER);
+        surfTrip.changeOrganizer(SURFER);
+    }
 
-    // function testChangeOrganizerChangesOrganizer() public {
-    //     vm.prank(DEPLOYER);
-    //     surfTrip.changeOrganizer(SURFER);
-    //     assertEq(surfTrip.getOrganizer(), SURFER);
-    // }
+    /// RECEIVE ///
+    function testReceiveAddsSurferBalance() public surferETHContribution {
+        assertEq(surfTrip.getSurferBalance(SURFER), tripFee);
+        assertEq(surfTrip.getSurfer(0), SURFER);
+    }
 
-    // function testChangeOrganizerEmitsEvent() public {
-    //     vm.prank(DEPLOYER);
-    //     vm.expectEmit(true, true, false, false, address(surfTrip));
-    //     emit OrganizerChanged(DEPLOYER, SURFER);
-    //     surfTrip.changeOrganizer(SURFER);
-    // }
+    function testReceiveAddsETHBalance() public surferETHContribution {
+        assertEq(address(surfTrip).balance, tripFee);
+    }
 
-    // // RECEIVE
-    // function testReceiveAddsSurferBalance() public {
-    //     vm.prank(SURFER);
-    //     vm.deal(SURFER, STARTING_SURFER_BALANCE);
-    //     (bool success,) = address(surfTrip).call{ value: tripFee }("");
-    //     assertEq(success, true);
-    //     assertEq(surfTrip.getSurfer(0), SURFER);
-    // }
+    function testReceiveEmitsEvent() public {
+        vm.startPrank(SURFER);
+        vm.expectEmit(true, true, true, false, address(surfTrip));
+        emit DepositMade(SURFER, tripFee, tripFee);
+        (bool success,) = address(surfTrip).call{ value: tripFee }("");
+        assertEq(success, true);
+        vm.stopPrank();
+    }
 }
