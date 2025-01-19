@@ -216,10 +216,6 @@ contract SurfTrip is Ownable, ReentrancyGuard {
         return s_surfers[index];
     }
 
-    function getBalance() external view returns (uint256) {
-        return address(this).balance;
-    }
-
     /**
      * @notice Returns the balance of a surfer in ETH, including all tokens.
      */
@@ -237,5 +233,13 @@ contract SurfTrip is Ownable, ReentrancyGuard {
 
     function getValueInETH(address token, uint256 amount) external view returns (uint256) {
         return _getValueInETH(token, amount);
+    }
+
+    function getCollateralTokenPriceFeed(address token) external view returns (address) {
+        return s_tokenPriceFeeds[token];
+    }
+
+    function getSupportedTokens() external view returns (address[] memory) {
+        return s_supportedERC20Tokens;
     }
 }
