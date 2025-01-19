@@ -2,14 +2,15 @@
 
 pragma solidity 0.8.28;
 
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
+
 /**
  * @title SurfTrip
  * @author Esteban Pintos
  * @notice This contract allows the Organizer of a surf trip to collect deposits from surfers. In certail deadline,
  * the organizer can withdraw all the deposits. If the deadline is not met, surfers can withdraw their deposits.
  */
-contract SurfTrip {
-    error SurfTrip_NotOrganizer();
+contract SurfTrip is Ownable {
     error SurfTrip__DeadlineAlreadySet();
     error SurfTrip__DepositIsTooLow(uint256 tripFee);
     error SurfTrip__NotEnoughDeposits();
@@ -18,7 +19,6 @@ contract SurfTrip {
     error SurfTrip__WithdrawFailed();
 
     uint256 private immutable i_tripFee;
-    address private s_organizer;
     uint256 private s_deadline;
     bool private s_deadlineSet;
     address[] private s_surfers;
@@ -30,16 +30,8 @@ contract SurfTrip {
     event WithdrawMade(address indexed host, uint256 indexed amountWithdraw);
     event OrganizerChanged(address indexed previousOrganizer, address indexed newOrganizer);
 
-    constructor(uint256 tripFee) {
+    constructor(uint256 tripFee) Ownable(msg.sender) {
         i_tripFee = tripFee;
-        s_organizer = msg.sender;
-    }
-
-    modifier onlyOrganizer() {
-        if (msg.sender != s_organizer) {
-            revert SurfTrip_NotOrganizer();
-        }
-        _;
     }
 
     modifier beforeDeadline() {
@@ -60,7 +52,7 @@ contract SurfTrip {
         emit DepositMade(msg.sender, msg.value, s_surfersBalances[msg.sender]);
     }
 
-    function setDeadline(uint256 _days) external onlyOrganizer {
+    function setDeadline(uint256 _days) external onlyOwner {
         if (s_deadlineSet) {
             revert SurfTrip__DeadlineAlreadySet();
         } else {
@@ -83,7 +75,7 @@ contract SurfTrip {
         emit RefundMade(msg.sender, amount, surferBalance - amount);
     }
 
-    function withdraw() external onlyOrganizer {
+    function withdraw() external onlyOwner {
         for (uint256 index = 0; index < s_surfers.length; index++) {
             address surfer = s_surfers[index];
             s_surfersBalances[surfer] = 0;
@@ -99,9 +91,9 @@ contract SurfTrip {
         }
     }
 
-    function changeOrganizer(address newOrganizer) external onlyOrganizer {
-        address previousOrganizer = s_organizer;
-        s_organizer = newOrganizer;
+    function changeOrganizer(address newOrganizer) external onlyOwner {
+        address previousOrganizer = owner();
+        transferOwnership(newOrganizer);
         emit OrganizerChanged(previousOrganizer, newOrganizer);
     }
 
@@ -115,7 +107,7 @@ contract SurfTrip {
     }
 
     function getOrganizer() external view returns (address) {
-        return s_organizer;
+        return owner();
     }
 
     function getDeadline() external view returns (uint256) {

@@ -2,11 +2,12 @@
 
 pragma solidity 0.8.28;
 
-import {Test, console2} from "lib/forge-std/src/Test.sol";
-import {SurfTrip} from "src/SurfTrip.sol";
-import {Vm} from "forge-std/Vm.sol";
-import {HelperConfig} from "script/HelperConfig.s.sol";
-import {DeploySurfTrip} from "script/DeploySurfTrip.s.sol";
+import { Test, console2 } from "lib/forge-std/src/Test.sol";
+import { SurfTrip } from "src/SurfTrip.sol";
+import { Vm } from "forge-std/Vm.sol";
+import { HelperConfig } from "script/HelperConfig.s.sol";
+import { DeploySurfTrip } from "script/DeploySurfTrip.s.sol";
+import { Ownable } from "@openzeppelin/contracts/access/Ownable.sol";
 
 contract SurfTripTest is Test {
     SurfTrip public surfTrip;
@@ -24,8 +25,8 @@ contract SurfTripTest is Test {
     event OrganizerChanged(address indexed previousOrganizer, address indexed newOrganizer);
 
     function setUp() public {
-        (surfTrip,) = new DeploySurfTrip().deployContract();
         DEPLOYER = msg.sender;
+        (surfTrip,) = new DeploySurfTrip().deployContract(DEPLOYER);
         vm.warp(STARTING_TIMESTAP);
         vm.prank(DEPLOYER);
         surfTrip.setDeadline(DEADLINE);
@@ -34,7 +35,7 @@ contract SurfTripTest is Test {
     modifier surferContribution() {
         vm.startPrank(SURFER);
         vm.deal(SURFER, STARTING_SURFER_BALANCE);
-        surfTrip.deposit{value: TRIP_FEE}();
+        surfTrip.deposit{ value: TRIP_FEE }();
         vm.stopPrank();
         _;
     }
@@ -59,7 +60,7 @@ contract SurfTripTest is Test {
     // SET DEADLINE
     function testSetDeadlineBySomeoneElseFails() public {
         vm.prank(SURFER);
-        vm.expectRevert(SurfTrip.SurfTrip_NotOrganizer.selector);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, SURFER));
         surfTrip.setDeadline(DEADLINE);
     }
 
@@ -82,9 +83,9 @@ contract SurfTripTest is Test {
     function testDepositAddsContributorBalance() public {
         vm.startPrank(SURFER);
         vm.deal(SURFER, STARTING_SURFER_BALANCE);
-        surfTrip.deposit{value: TRIP_FEE}();
+        surfTrip.deposit{ value: TRIP_FEE }();
         assertEq(surfTrip.getSurferBalance(SURFER), TRIP_FEE);
-        surfTrip.deposit{value: TRIP_FEE}();
+        surfTrip.deposit{ value: TRIP_FEE }();
         vm.stopPrank();
         assertEq(surfTrip.getSurferBalance(SURFER), TRIP_FEE * 2);
         assertEq(address(surfTrip).balance, TRIP_FEE * 2);
@@ -98,7 +99,7 @@ contract SurfTripTest is Test {
         vm.prank(SURFER);
         vm.deal(SURFER, STARTING_SURFER_BALANCE);
         vm.expectRevert(abi.encodeWithSelector(SurfTrip.SurfTrip__DepositIsTooLow.selector, TRIP_FEE));
-        surfTrip.deposit{value: TRIP_FEE - 1}();
+        surfTrip.deposit{ value: TRIP_FEE - 1 }();
     }
 
     function testDepositEmitsEvent() public {
@@ -106,7 +107,7 @@ contract SurfTripTest is Test {
         vm.deal(SURFER, STARTING_SURFER_BALANCE);
         vm.expectEmit(true, true, true, false, address(surfTrip));
         emit DepositMade(SURFER, TRIP_FEE, TRIP_FEE);
-        surfTrip.deposit{value: TRIP_FEE}();
+        surfTrip.deposit{ value: TRIP_FEE }();
     }
 
     // REFUND
@@ -154,7 +155,7 @@ contract SurfTripTest is Test {
     // WITHDRAW
     function testWithdrawFailsIfNotOrganizer() public {
         vm.startPrank(SURFER);
-        vm.expectRevert(SurfTrip.SurfTrip_NotOrganizer.selector);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, SURFER));
         surfTrip.withdraw();
         vm.stopPrank();
     }
@@ -186,7 +187,7 @@ contract SurfTripTest is Test {
     // CHANGE ORGANIZER
     function testChangeOrganizerFailsIfCalledBySomeoneElse() public {
         vm.prank(SURFER);
-        vm.expectRevert(SurfTrip.SurfTrip_NotOrganizer.selector);
+        vm.expectRevert(abi.encodeWithSelector(Ownable.OwnableUnauthorizedAccount.selector, SURFER));
         surfTrip.changeOrganizer(SURFER);
     }
 
@@ -207,7 +208,7 @@ contract SurfTripTest is Test {
     function testReceiveAddsSurferBalance() public {
         vm.prank(SURFER);
         vm.deal(SURFER, STARTING_SURFER_BALANCE);
-        (bool success,) = address(surfTrip).call{value: TRIP_FEE}("");
+        (bool success,) = address(surfTrip).call{ value: TRIP_FEE }("");
         assertEq(success, true);
         assertEq(surfTrip.getSurfer(0), SURFER);
     }
