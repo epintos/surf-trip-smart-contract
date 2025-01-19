@@ -17,7 +17,7 @@ deploy-sepolia :
 	@forge script script/DeploySurfTrip.s.sol:DeploySurfTrip --rpc-url $(SEPOLIA_RPC_URL) --account $(SEPOLIA_ACCOUNT) --broadcast --verify --etherscan-api-key $(ETHERSCAN_API_KEY) -vvvv
 
 deploy-anvil :
-	@forge script script/DeploySurfTrip.s.sol:DeploySurfTrip --rpc-url $(RPC_URL) --account $(ANVIL_ACCOUNT) --broadcast -vvvv
+	@forge script script/DeploySurfTrip.s.sol:DeploySurfTrip --rpc-url $(RPC_URL) --account $(ANVIL_ACCOUNT) --broadcast -vvvv --sender $(ANVIL_ACCOUNT_ADDRESS)
 
 fund-account :
 	cast send $(SEPOLIA_ACCOUNT_ADDRESS) --value 0.01ether --rpc-url $(RPC_URL) --account $(ANVIL_ACCOUNT)
