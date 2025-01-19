@@ -2,6 +2,12 @@
 
 pragma solidity 0.8.28;
 
+/**
+ * @title SurfTrip
+ * @author Esteban Pintos
+ * @notice This contract allows the Organizer of a surf trip to collect deposits from surfers. In certail deadline,
+ * the organizer can withdraw all the deposits. If the deadline is not met, surfers can withdraw their deposits.
+ */
 contract SurfTrip {
     error SurfTrip_NotOrganizer();
     error SurfTrip__DeadlineAlreadySet();
@@ -69,7 +75,7 @@ contract SurfTrip {
         if (surferBalance < amount) {
             revert SurfTrip__NotEnoughDeposits();
         }
-        (bool success,) = msg.sender.call{value: amount}("");
+        (bool success,) = msg.sender.call{ value: amount }("");
         s_surfersBalances[msg.sender] -= amount;
         if (!success) {
             revert SurfTrip__RefundFailed();
@@ -87,7 +93,7 @@ contract SurfTrip {
 
         uint256 currentBalance = address(this).balance;
         emit WithdrawMade(msg.sender, currentBalance);
-        (bool success,) = msg.sender.call{value: currentBalance}("");
+        (bool success,) = msg.sender.call{ value: currentBalance }("");
         if (!success) {
             revert SurfTrip__WithdrawFailed();
         }

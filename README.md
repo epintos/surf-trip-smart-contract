@@ -6,10 +6,12 @@ This is a practice project where I explore and experiment with various Solidity 
 
 ## Usage
 
-### Build
+## Usage
+
+### Install
 
 ```shell
-$ make build
+$ make install
 ```
 
 ### Test
@@ -18,40 +20,18 @@ $ make build
 $ make test
 ```
 
-### Format
-
-```shell
-$ forge fmt
-```
-
-### Gas Snapshots
-
-```shell
-$ forge snapshot
-```
-
-### Anvil
-
-```shell
-$ anvil
-```
-
 ### Deploy
 
 ```shell
 $ make deploy-anvil
 ```
 
-### Cast
-
 ```shell
-$ cast <subcommand>
+$ make deploy-sepolia
 ```
 
-### Help
+### Fund metamask or others
 
 ```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+$ make fund-account
 ```
