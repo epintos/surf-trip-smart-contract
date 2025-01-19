@@ -119,6 +119,13 @@ contract SurfTripTest is Test {
         vm.stopPrank();
     }
 
+    function testRefundFailsIfAmountIsZero() public {
+        vm.startPrank(SURFER);
+        vm.expectRevert(SurfTrip.SurfTrip__NeedsToBeMoreThanZero.selector);
+        surfTrip.refund(0);
+        vm.stopPrank();
+    }
+
     function testRefundFailsIfNotEnoughtSurferBalance() public surferContribution {
         vm.startPrank(SURFER);
         vm.expectRevert(SurfTrip.SurfTrip__NotEnoughDeposits.selector);

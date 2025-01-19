@@ -2,11 +2,11 @@
 
 pragma solidity 0.8.28;
 
-import {Script} from "lib/forge-std/src/Script.sol";
+import { Script } from "lib/forge-std/src/Script.sol";
 
 abstract contract CodeConstants {
-    uint256 public constant SEPOLIA_CHAIN_ID = 11155111;
-    uint256 public constant LOCAL_CHAIN_ID = 31337;
+    uint256 public constant SEPOLIA_CHAIN_ID = 11_155_111;
+    uint256 public constant LOCAL_CHAIN_ID = 31_337;
 }
 
 contract HelperConfig is Script, CodeConstants {
@@ -33,10 +33,10 @@ contract HelperConfig is Script, CodeConstants {
     }
 
     function getSepoliaEthConfig() public pure returns (NetworkConfig memory) {
-        return NetworkConfig({tripFee: 0.01 ether});
+        return NetworkConfig({ tripFee: 0.01 ether });
     }
 
     function getAnvilEthConfig() public pure returns (NetworkConfig memory) {
-        return NetworkConfig({tripFee: 0.01 ether});
+        return NetworkConfig({ tripFee: 0.01 ether });
     }
 }
