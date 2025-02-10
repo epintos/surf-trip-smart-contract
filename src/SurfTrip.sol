@@ -110,6 +110,7 @@ contract SurfTrip is Ownable, ReentrancyGuard {
             }
         }
         uint256 ethBalance = s_surfersETHBalance[msg.sender];
+        emit RefundMade(msg.sender);
         if (ethBalance != 0) {
             s_surfersETHBalance[msg.sender] = 0;
             (bool success,) = msg.sender.call{ value: ethBalance }("");
@@ -117,7 +118,6 @@ contract SurfTrip is Ownable, ReentrancyGuard {
                 revert SurfTrip__RefundFailed();
             }
         }
-        emit RefundMade(msg.sender);
     }
 
     function withdraw() external onlyOwner nonReentrant {
@@ -144,11 +144,11 @@ contract SurfTrip is Ownable, ReentrancyGuard {
         }
 
         uint256 currentETHBalance = address(this).balance;
+        emit WithdrawMade(msg.sender);
         (bool success,) = msg.sender.call{ value: currentETHBalance }("");
         if (!success) {
             revert SurfTrip__WithdrawFailed();
         }
-        emit WithdrawMade(msg.sender);
     }
 
     function changeOrganizer(address newOrganizer) external onlyOwner {
@@ -177,9 +177,9 @@ contract SurfTrip is Ownable, ReentrancyGuard {
         if (s_surfersERC20Balances[msg.sender][token] == 0) {
             s_surfers.push(msg.sender);
         }
-        IERC20(token).transferFrom(msg.sender, address(this), amount);
-        s_surfersERC20Balances[msg.sender][token] += amount;
         emit DepositMade(msg.sender, amount, surferBalanceInETH + amountInETH);
+        s_surfersERC20Balances[msg.sender][token] += amount;
+        IERC20(token).transferFrom(msg.sender, address(this), amount);
     }
 
     // PRIVATE & INTERNAL VIEW FUNCTIONS
